@@ -9,7 +9,8 @@ type Store = {
 
   fetchTaskLists: () => Promise<void>;
   fetchTasks: (listId: string) => Promise<void>;
-  addTaskList: (name: string) => Promise<void>;
+  addTaskList: (name: string) => Promise<string | null>;
+  renameTaskList: (id: string, name: string) => Promise<void>;
   deleteTaskList: (id: string) => Promise<void>;
   addTask: (listId: string, title: string) => Promise<void>;
   updateTask: (id: string, updates: Partial<Omit<Task, 'id' | 'list_id' | 'created_at'>>) => Promise<void>;
@@ -66,7 +67,22 @@ export const useStore = create<Store>((set, get) => ({
 
     if (!error && data) {
       set({ taskLists: [...get().taskLists, data] });
+      return data.id;
     }
+    return null;
+  },
+
+  renameTaskList: async (id: string, name: string) => {
+    await supabase
+      .from('task_lists')
+      .update({ name, updated_at: new Date().toISOString() })
+      .eq('id', id);
+
+    set({
+      taskLists: get().taskLists.map(list =>
+        list.id === id ? { ...list, name } : list
+      ),
+    });
   },
 
   deleteTaskList: async (id: string) => {
